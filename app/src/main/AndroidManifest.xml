@@ -11,9 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AnimatedClock"
         tools:targetApi="31">
-        <activity
-            android:name=".ClockActivity"
-            android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
