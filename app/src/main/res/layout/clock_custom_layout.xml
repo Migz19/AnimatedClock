@@ -9,9 +9,9 @@
 
     <com.example.animatedclock.clock.views.ClockView
         android:id="@+id/clockView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_width="250dp"
+
+        android:layout_height="220dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
 

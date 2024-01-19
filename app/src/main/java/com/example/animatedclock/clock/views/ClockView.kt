@@ -1,17 +1,22 @@
 package com.example.animatedclock.clock.views
 
-import android.R
+import com.example.animatedclock.R
+
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
-import android.os.Build
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.LinearInterpolator
-import androidx.annotation.RequiresApi
-import java.lang.StrictMath.cos
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.alpha
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import java.util.concurrent.TimeUnit
+import kotlin.math.cos
 import kotlin.math.sin
 
 private lateinit var clockBitmap: Bitmap
@@ -22,27 +27,49 @@ private lateinit var inner: RectF
 private lateinit var clockAnimator: ValueAnimator
 
 private val thickness_scale = 0.3f
-
-
+private var currentHour=0
+private var am_pm=""
+private var totalMinutes=0
 class ClockView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defstyleAtrr: Int = 0
 ) : View(context, attrs, defstyleAtrr) {
+    private val clockVm:ClockViewModel by lazy { ClockViewModel() }
     var circlePaint = Paint().apply {
         style = Paint.Style.STROKE
-        strokeWidth = 20f
+        strokeWidth = 25f
         strokeCap = Paint.Cap.ROUND
-        color = resources.getColor(R.color.holo_blue_dark, null)
+        color = resources.getColor(R.color.customCyan, null)
         isAntiAlias = true
     }
+    private val digitalTextPaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 150f
+        textAlign = Paint.Align.CENTER
 
+    }
+    private val textPaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 50f
+        textAlign = Paint.Align.CENTER
+    }
+    private val indicatorPaint = Paint().apply {
+        color =   ContextCompat.getColor(context, R.color.customPink)
+
+        style = Paint.Style.FILL
+    }
+    private val pointPaint=Paint().apply {
+        color = ContextCompat.getColor(context, R.color.grey)
+
+    }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = (Math.min(width, height) / 2 ).toFloat()
+        val radius = (Math.min(width, height) /2*0.9 ).toFloat()
+        val x = centerX + radius * cos(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
+        val y = centerY - radius * sin(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
 
         if (sweepAngle > 0.0f) {
-            circlePaint.shader
             canvas.drawArc(
                 centerX - radius,
                 centerY - radius,
@@ -53,7 +80,22 @@ class ClockView @JvmOverloads constructor(
                 false,
                 circlePaint
             )
+            for (minute in totalMinutes until 60) {
+                val fraction = minute / 360f
+                val sweepAngle = 360-(fraction * 60f)
+                val x = centerX + radius * cos(sweepAngle)
+                val y = centerY + radius * sin(sweepAngle)
+                // Draw circular point
 
+                canvas.drawCircle(x, y,4f, pointPaint)
+
+            }
+            canvas.drawCircle(x, y, 50f,indicatorPaint )
+
+            canvas.drawText("$currentHour", centerX, centerY+(radius*0.3f), digitalTextPaint)
+
+            canvas.drawText(am_pm,centerX+(radius* cos(Math.toRadians(60.0)).toFloat()),centerY-(radius* 0.1.toFloat()),textPaint)
+            canvas.drawText(totalMinutes.toString(),x,y+10,textPaint)
             canvas.drawBitmap(clockBitmap, 0f, 0f, circlePaint)
 
         }
@@ -61,10 +103,8 @@ class ClockView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         //check the following code for more details
-        //https://stackoverflow.com/questions/15261088/android-canvas-drawbitmap-not-working
         if (w != oldw || h != oldh) {
             clockBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            // clockBitmap.eraseColor(Color.TRANSPARENT)
             clockCanvas = Canvas(clockBitmap)
         }
         super.onSizeChanged(w, h, oldw, oldh)
@@ -73,9 +113,18 @@ class ClockView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        clockVm.observeMinutesValue().observeForever { value ->
+
+            totalMinutes=value
+            invalidate()
+            startAnimation(value)
+        }
+        clockVm.observeHoursValue().observeForever{
+            currentHour=it.first
+            am_pm=it.second
+        }
 
     }
-
 
     private fun drawProgress(progress: Float) {
         sweepAngle = 360 * progress
@@ -91,16 +140,17 @@ class ClockView @JvmOverloads constructor(
 
     ///////////////////////////Animation//////////////////////////////
 
-    fun startAnimation(minutes: Int) {
 
-        clockAnimator = ValueAnimator.ofFloat(0.0f, 360f).apply {
-            duration = TimeUnit.SECONDS.toMillis(minutes.toLong())
+    fun startAnimation(minutes: Int) {
+        val initialsweepAngle=(minutes*360/60f)
+        clockAnimator = ValueAnimator.ofFloat(initialsweepAngle, 360f).apply {
+            duration = TimeUnit.MINUTES.toMillis(60-(minutes.toLong()))
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
-
             addListener(object : Animator.AnimatorListener {
                 override fun onAnimationStart(animation: Animator) {
 
+                    invalidate()
                 }
 
                 override fun onAnimationEnd(animation: Animator) {
@@ -113,17 +163,18 @@ class ClockView @JvmOverloads constructor(
 
             })
             addUpdateListener {
-
                 val gradientColors = intArrayOf(
-                    evaluateColor(0f, Color.argb(255, 0, 139, 255)),
-                    evaluateColor(0f, Color.argb(255, 121, 91, 173)),
-                    evaluateColor(0f, Color.argb(255, 220, 40, 106))
+                    ContextCompat.getColor(context, R.color.customCyan),
+                    ContextCompat.getColor(context, R.color.customMagneta),
+                    ContextCompat.getColor(context, R.color.customPink),
+                    ContextCompat.getColor(context, R.color.customCyan)
                 )
-                circlePaint.shader = LinearGradient(
-                    2.5f, 0f, width.toFloat(), height.toFloat(),
-                    gradientColors, null, Shader.TileMode.CLAMP
-                )
-                val value=(it.animatedValue as Float )
+                val gradientPositions = floatArrayOf(0f, 0.25f, 0.5f, 1f)
+                val sweepGradient=setSweepAnim(gradientColors,gradientPositions)
+
+                circlePaint.shader = sweepGradient
+
+                val value = (it.animatedValue as Float)
                 drawProgress(value)
                 sweepAngle = it.animatedValue as Float
                 invalidate()
@@ -132,23 +183,15 @@ class ClockView @JvmOverloads constructor(
 
         clockAnimator.start()
     }
-
-    fun stopAnimation() {
-        clockAnimator.cancel()
-        drawProgress(0f)
-    }
-
-    private fun evaluateColor(fraction: Float, startValue: Int): Int {
-        val startA = Color.alpha(startValue)
-        val startR = Color.red(startValue)
-        val startG = Color.green(startValue)
-        val startB = Color.blue(startValue)
-
-        return Color.argb(
-            (startA + fraction * (255 - startA)).toInt(),
-            (startR + fraction * (255 - startR)).toInt(),
-            (startG + fraction * (255 - startG)).toInt(),
-            (startB + fraction * (255 - startB)).toInt()
+    private fun setSweepAnim (colors:IntArray, positions:FloatArray): SweepGradient {
+        val sweepGradient = SweepGradient(
+            width.toFloat() / 2, height.toFloat() / 2,
+            colors, positions
         )
+        val matrix = Matrix()
+        matrix.setRotate(-90f, width.toFloat() / 2, height.toFloat() / 2)
+        sweepGradient.setLocalMatrix(matrix)
+        return sweepGradient
     }
+
 }
