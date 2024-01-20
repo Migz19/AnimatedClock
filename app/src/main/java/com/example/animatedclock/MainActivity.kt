@@ -14,13 +14,14 @@ import com.example.animatedclock.databinding.ClockCustomLayoutBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val clockVm: ClockViewModel by lazy {  ViewModelProvider(this)[ClockViewModel::class.java]}
     private lateinit var clockView: ClockView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
+        val contentBinding=ClockCustomLayoutBinding.inflate(layoutInflater)
         setContentView(binding.root)
         clockView = ClockView(this)
+        contentBinding.clockView.setClockViewSize(10,10)
 
 
     }

@@ -21,39 +21,41 @@ private lateinit var inner: RectF
 private lateinit var clockAnimator: ValueAnimator
 
 private val thickness_scale = 0.3f
-private var currentHour=0
-private var am_pm=""
-private var totalMinutes=0
-class ClockView @JvmOverloads constructor(
+private var currentYear=0
+private var currentMonth=0
+private var currentDay=0
+class DateView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defstyleAtrr: Int = 0
 ) : View(context, attrs, defstyleAtrr) {
     private val clockVm:ClockViewModel by lazy { ClockViewModel() }
     var circlePaint = Paint().apply {
         style = Paint.Style.STROKE
-        strokeWidth = 25f
+        strokeWidth = 15f
         strokeCap = Paint.Cap.ROUND
-        color = resources.getColor(R.color.customCyan, null)
+        color = resources.getColor(R.color.grey, null)
         isAntiAlias = true
     }
     private val digitalTextPaint = Paint().apply {
         color = Color.BLACK
-        textSize = 150f
+        textSize = 75f
         textAlign = Paint.Align.CENTER
 
     }
-    private val textPaint = Paint().apply {
+    private val secondaryTextPaint = Paint().apply {
         color = Color.BLACK
         textSize = 50f
         textAlign = Paint.Align.CENTER
+
+    }
+    private val tertiaryText=Paint().apply {
+        color = Color.BLACK
+        textSize = 35f
+        textAlign = Paint.Align.CENTER
     }
     private val indicatorPaint = Paint().apply {
-        color =   ContextCompat.getColor(context, R.color.customPink)
+        color =   ContextCompat.getColor(context, R.color.grey)
 
         style = Paint.Style.FILL
-    }
-    private val pointPaint=Paint().apply {
-        color = ContextCompat.getColor(context, R.color.grey)
-
     }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -62,7 +64,7 @@ class ClockView @JvmOverloads constructor(
         val radius = (Math.min(width, height) /3 ).toFloat()
         val x = centerX + radius * cos(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
         val y = centerY - radius * sin(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
-        drawCircularPoints(centerX,centerY,radius, totalMinutes,canvas)
+
         if (sweepAngle > 0.0f) {
             canvas.drawArc(
                 centerX - radius,
@@ -75,18 +77,14 @@ class ClockView @JvmOverloads constructor(
                 circlePaint
             )
 
-
-            canvas.drawCircle(x, y, 50f,indicatorPaint )
-
-            canvas.drawText("$currentHour", centerX, centerY+(radius*0.2f), digitalTextPaint)
-
-            canvas.drawText(am_pm,centerX+(radius* cos(Math.toRadians(70.0)).toFloat()),centerY-(radius* 0.25.toFloat()),textPaint)
-            canvas.drawText(totalMinutes.toString(),x,y+10,textPaint)
+            canvas.drawCircle(x, y, 30f,indicatorPaint )
+            canvas.drawText("$currentMonth", centerX, centerY, digitalTextPaint)
+            canvas.drawText("$currentDay", x, y, tertiaryText)
+            canvas.drawText("$currentYear",centerX,centerY+radius*0.5f,secondaryTextPaint)
             canvas.drawBitmap(clockBitmap, 0f, 0f, circlePaint)
 
         }
     }
-
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         if (w != oldw || h != oldh) {
             clockBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -95,22 +93,18 @@ class ClockView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         modifyEdge()
     }
-
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        clockVm.observeMinutesValue().observeForever { value ->
-
-            totalMinutes=value
+        clockVm.observeCurrentDay().observeForever { value ->
+            currentDay=value.day
+            currentMonth=value.month
+            currentYear=value.year
             invalidate()
-            startAnimation(value)
+            startAnimation(currentDay)
         }
-        clockVm.observeHoursValue().observeForever{
-            currentHour=it.first
-            am_pm=it.second
-        }
+
 
     }
-
     private fun drawProgress(progress: Float) {
         sweepAngle = 360 * progress
         invalidate()
@@ -122,14 +116,10 @@ class ClockView @JvmOverloads constructor(
         inner = RectF(outer.left + thickness, outer.top + thickness, outer.right + thickness, outer.bottom + thickness)
         invalidate()
     }
-
-    ///////////////////////////Animation//////////////////////////////
-
-
-    fun startAnimation(minutes: Int) {
-        val initialsweepAngle=(minutes*360/60f)
+    fun startAnimation(days: Int) {
+        val initialsweepAngle=(days*360/30f)
         clockAnimator = ValueAnimator.ofFloat(initialsweepAngle, 360f).apply {
-            duration = TimeUnit.MINUTES.toMillis(60-(minutes.toLong()))
+            duration = TimeUnit.DAYS.toMillis(30-(days.toLong()))
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
             addListener(object : Animator.AnimatorListener {
@@ -148,16 +138,6 @@ class ClockView @JvmOverloads constructor(
 
             })
             addUpdateListener {
-                val gradientColors = intArrayOf(
-                    ContextCompat.getColor(context, R.color.customCyan),
-                    ContextCompat.getColor(context, R.color.customMagneta),
-                    ContextCompat.getColor(context, R.color.customPink),
-                    ContextCompat.getColor(context, R.color.customCyan)
-                )
-                val gradientPositions = floatArrayOf(0f, 0.25f, 0.5f, 1f)
-                val sweepGradient=setSweepAnim(gradientColors,gradientPositions)
-
-                circlePaint.shader = sweepGradient
 
                 val value = (it.animatedValue as Float)
                 drawProgress(value)
@@ -168,29 +148,7 @@ class ClockView @JvmOverloads constructor(
 
         clockAnimator.start()
     }
-    private fun setSweepAnim (colors:IntArray, positions:FloatArray): SweepGradient {
-        val sweepGradient = SweepGradient(
-            width.toFloat() / 2, height.toFloat() / 2,
-            colors, positions
-        )
-        val matrix = Matrix()
-        matrix.setRotate(-90f, width.toFloat() / 2, height.toFloat() / 2)
-        sweepGradient.setLocalMatrix(matrix)
-        return sweepGradient
-    }
 
-    private fun drawCircularPoints(centerX: Float, centerY: Float, radius: Float, minutes: Int,canvas: Canvas) {
-        val currentMinuteProgress = (minutes / 60.0f) * 360.0f
-        val startPointAngle = 360 - currentMinuteProgress
-
-        for (minute in 0 until 60) {
-            val angle = startPointAngle - (minute * 6)
-            val x = centerX + radius * cos(Math.toRadians(angle.toDouble())).toFloat()
-            val y = centerY - radius * sin(Math.toRadians(angle.toDouble())).toFloat()
-
-            canvas.drawCircle(x, y, 5f, pointPaint)
-        }
-    }
     fun setClockViewSize(width: Int, height: Int) {
         val params = layoutParams
         params.width = width

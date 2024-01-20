@@ -3,12 +3,14 @@ package com.example.animatedclock.clock.views
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.animatedclock.clock.CurrentDay
 import java.util.*
 
 class ClockViewModel:ViewModel() {
 
     private val minutesValue = MutableLiveData<Int>()
     private val hoursValue=MutableLiveData<Pair<Int,String>>()
+    private val dayValue=MutableLiveData<CurrentDay>()
     fun observeMinutesValue(): LiveData<Int> {
         minutesValue.value = getCurrentMinutes()
         return  minutesValue
@@ -17,8 +19,9 @@ class ClockViewModel:ViewModel() {
         hoursValue.value= getCurrentHour()
         return hoursValue
     }
-    fun observeCurrentDay(){
-        getCurrentDay()
+    fun observeCurrentDay(): MutableLiveData<CurrentDay> {
+        dayValue.value=getCurrentDay()
+        return dayValue
     }
 
     private val timer: Timer = Timer()
@@ -27,8 +30,8 @@ class ClockViewModel:ViewModel() {
 
         timer.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
-
                 minutesValue.postValue(getCurrentMinutes())
+                hoursValue.postValue(getCurrentHour())
             }
         }, 0, 1000)
     }
