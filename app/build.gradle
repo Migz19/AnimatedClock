@@ -6,7 +6,14 @@ plugins {
 android {
     namespace 'com.example.animatedclock'
     compileSdk 34
-
+    signingConfigs {
+        release {
+            storeFile file('path/to/your/keystore.jks')
+            storePassword 'your_keystore_password'
+            keyAlias 'your_key_alias'
+            keyPassword 'your_key_password'
+        }
+    }
     defaultConfig {
         applicationId "com.example.animatedclock"
         minSdk 24
@@ -20,7 +27,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -41,7 +47,17 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.10.0'
+    // ViewModel and LiveData
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.7.0"
 
+    // ViewModel and LiveData for activities
+    implementation "androidx.activity:activity-ktx:1.8.2"
+
+    //Kotlin extensions
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
 
     implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
     implementation "com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.3"

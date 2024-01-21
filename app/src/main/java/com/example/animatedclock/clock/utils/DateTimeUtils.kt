@@ -1,7 +1,10 @@
 package com.example.animatedclock.clock.views
 
+import android.app.Application
 import android.os.Build
 import com.example.animatedclock.clock.CurrentDay
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.*
@@ -17,7 +20,9 @@ fun getCurrentHour(): Pair<Int, String> {
     }
 
 }
-
+fun provideFusedLocationClient(app: Application): FusedLocationProviderClient {
+    return  LocationServices.getFusedLocationProviderClient(app)
+}
 fun getCurrentMinutes(): Int {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         LocalTime.now().minute

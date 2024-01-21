@@ -78,8 +78,8 @@ class DateView @JvmOverloads constructor(
             )
 
             canvas.drawCircle(x, y, 30f,indicatorPaint )
-            canvas.drawText("$currentMonth", centerX, centerY, digitalTextPaint)
-            canvas.drawText("$currentDay", x, y, tertiaryText)
+            canvas.drawText("$currentDay", centerX, centerY, digitalTextPaint)
+            canvas.drawText("$currentDay", x, y+(radius* 0.09f), tertiaryText)
             canvas.drawText("$currentYear",centerX,centerY+radius*0.5f,secondaryTextPaint)
             canvas.drawBitmap(clockBitmap, 0f, 0f, circlePaint)
 
@@ -93,18 +93,7 @@ class DateView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         modifyEdge()
     }
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        clockVm.observeCurrentDay().observeForever { value ->
-            currentDay=value.day
-            currentMonth=value.month
-            currentYear=value.year
-            invalidate()
-            startAnimation(currentDay)
-        }
 
-
-    }
     private fun drawProgress(progress: Float) {
         sweepAngle = 360 * progress
         invalidate()
@@ -149,11 +138,16 @@ class DateView @JvmOverloads constructor(
         clockAnimator.start()
     }
 
-    fun setClockViewSize(width: Int, height: Int) {
-        val params = layoutParams
-        params.width = width
-        params.height = height
-        layoutParams = params
-        requestLayout()
+
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        clockVm.observeCurrentDay().observeForever { value ->
+            currentDay=value.day
+            currentMonth=value.month
+            currentYear=value.year
+            invalidate()
+            startAnimation(currentDay)
+        }
     }
 }

@@ -2,16 +2,27 @@ package com.example.animatedclock.clock.views
 
 import android.animation.Animator
 import android.animation.ValueAnimator
+import android.app.Application
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
+import androidx.core.view.postDelayed
+import androidx.lifecycle.MutableLiveData
 import com.example.animatedclock.R
+import com.example.animatedclock.location.LocationTracker
+import com.example.animatedclock.weather.data.WeatherBuilder
+import com.example.animatedclock.weather.data.WeatherData
+import com.example.animatedclock.weather.data.WeatherRepository
+import com.example.animatedclock.weather.ui.WeatherState
+import com.example.animatedclock.weather.ui.WeatherViewModel
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.properties.Delegates
 
 private lateinit var clockBitmap: Bitmap
 private lateinit var clockCanvas: Canvas
@@ -19,16 +30,17 @@ private var sweepAngle: Float = 0.0f
 private lateinit var outer: RectF
 private lateinit var inner: RectF
 private lateinit var clockAnimator: ValueAnimator
-
 private val thickness_scale = 0.3f
-private var currentHour=0
-private var am_pm=""
-private var totalMinutes=0
+private var currentHour = 0
+private var am_pm = ""
+private var totalMinutes = 0
+private var temperature = 0.0
+
 class ClockView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defstyleAtrr: Int = 0
 ) : View(context, attrs, defstyleAtrr) {
-    private val clockVm:ClockViewModel by lazy { ClockViewModel() }
-    var circlePaint = Paint().apply {
+    private val clockVm: ClockViewModel by lazy { ClockViewModel() }
+    private var circlePaint = Paint().apply {
         style = Paint.Style.STROKE
         strokeWidth = 25f
         strokeCap = Paint.Cap.ROUND
@@ -37,32 +49,45 @@ class ClockView @JvmOverloads constructor(
     }
     private val digitalTextPaint = Paint().apply {
         color = Color.BLACK
-        textSize = 150f
+        textSize = 100f
         textAlign = Paint.Align.CENTER
 
     }
+
     private val textPaint = Paint().apply {
         color = Color.BLACK
-        textSize = 50f
+        textSize = 40f
         textAlign = Paint.Align.CENTER
     }
     private val indicatorPaint = Paint().apply {
-        color =   ContextCompat.getColor(context, R.color.customPink)
+        color = ContextCompat.getColor(context, R.color.customPink)
 
         style = Paint.Style.FILL
     }
-    private val pointPaint=Paint().apply {
+    private val pointPaint = Paint().apply {
         color = ContextCompat.getColor(context, R.color.grey)
+    }
+
+    override fun requestLayout() {
+        super.requestLayout()
+        observeDataChanges()
+
+        weatherData.observeForever {
+
+            temperature=it.temperature_2m
+            invalidate()
+    }
 
     }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = (Math.min(width, height) /3 ).toFloat()
+        val radius = (Math.min(width, height) / 3).toFloat()
         val x = centerX + radius * cos(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
         val y = centerY - radius * sin(Math.toRadians(90 - sweepAngle.toDouble())).toFloat()
-        drawCircularPoints(centerX,centerY,radius, totalMinutes,canvas)
+        drawCircularPoints(centerX, centerY, radius, totalMinutes, canvas)
         if (sweepAngle > 0.0f) {
             canvas.drawArc(
                 centerX - radius,
@@ -76,12 +101,13 @@ class ClockView @JvmOverloads constructor(
             )
 
 
-            canvas.drawCircle(x, y, 50f,indicatorPaint )
+            canvas.drawCircle(x, y, 50f, indicatorPaint)
 
-            canvas.drawText("$currentHour", centerX, centerY+(radius*0.2f), digitalTextPaint)
+            canvas.drawText("$currentHour", centerX, centerY + (radius * 0.2f), digitalTextPaint)
 
-            canvas.drawText(am_pm,centerX+(radius* cos(Math.toRadians(70.0)).toFloat()),centerY-(radius* 0.25.toFloat()),textPaint)
-            canvas.drawText(totalMinutes.toString(),x,y+10,textPaint)
+            canvas.drawText(am_pm, centerX + (radius * cos(Math.toRadians(70.0)).toFloat()), centerY - (radius * 0.25.toFloat()), textPaint)
+            canvas.drawText(totalMinutes.toString(), x, y + 10, textPaint)
+            canvas.drawText("${temperature}°C", centerX + radius * 0.1f, centerY + radius * 0.4f, textPaint)
             canvas.drawBitmap(clockBitmap, 0f, 0f, circlePaint)
 
         }
@@ -96,20 +122,6 @@ class ClockView @JvmOverloads constructor(
         modifyEdge()
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        clockVm.observeMinutesValue().observeForever { value ->
-
-            totalMinutes=value
-            invalidate()
-            startAnimation(value)
-        }
-        clockVm.observeHoursValue().observeForever{
-            currentHour=it.first
-            am_pm=it.second
-        }
-
-    }
 
     private fun drawProgress(progress: Float) {
         sweepAngle = 360 * progress
@@ -126,10 +138,10 @@ class ClockView @JvmOverloads constructor(
     ///////////////////////////Animation//////////////////////////////
 
 
-    fun startAnimation(minutes: Int) {
-        val initialsweepAngle=(minutes*360/60f)
+    private fun startAnimation(minutes: Int) {
+        val initialsweepAngle = (minutes * 360 / 60f)
         clockAnimator = ValueAnimator.ofFloat(initialsweepAngle, 360f).apply {
-            duration = TimeUnit.MINUTES.toMillis(60-(minutes.toLong()))
+            duration = TimeUnit.MINUTES.toMillis(60 - (minutes.toLong()))
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
             addListener(object : Animator.AnimatorListener {
@@ -139,7 +151,9 @@ class ClockView @JvmOverloads constructor(
                 }
 
                 override fun onAnimationEnd(animation: Animator) {
-                    sweepAngle = 0f }
+                    sweepAngle = 0f
+                }
+
                 override fun onAnimationCancel(animation: Animator) {}
 
                 override fun onAnimationRepeat(animation: Animator) {
@@ -155,7 +169,7 @@ class ClockView @JvmOverloads constructor(
                     ContextCompat.getColor(context, R.color.customCyan)
                 )
                 val gradientPositions = floatArrayOf(0f, 0.25f, 0.5f, 1f)
-                val sweepGradient=setSweepAnim(gradientColors,gradientPositions)
+                val sweepGradient = setSweepAnim(gradientColors, gradientPositions)
 
                 circlePaint.shader = sweepGradient
 
@@ -168,7 +182,8 @@ class ClockView @JvmOverloads constructor(
 
         clockAnimator.start()
     }
-    private fun setSweepAnim (colors:IntArray, positions:FloatArray): SweepGradient {
+
+    private fun setSweepAnim(colors: IntArray, positions: FloatArray): SweepGradient {
         val sweepGradient = SweepGradient(
             width.toFloat() / 2, height.toFloat() / 2,
             colors, positions
@@ -179,7 +194,7 @@ class ClockView @JvmOverloads constructor(
         return sweepGradient
     }
 
-    private fun drawCircularPoints(centerX: Float, centerY: Float, radius: Float, minutes: Int,canvas: Canvas) {
+    private fun drawCircularPoints(centerX: Float, centerY: Float, radius: Float, minutes: Int, canvas: Canvas) {
         val currentMinuteProgress = (minutes / 60.0f) * 360.0f
         val startPointAngle = 360 - currentMinuteProgress
 
@@ -191,11 +206,26 @@ class ClockView @JvmOverloads constructor(
             canvas.drawCircle(x, y, 5f, pointPaint)
         }
     }
-    fun setClockViewSize(width: Int, height: Int) {
-        val params = layoutParams
-        params.width = width
-        params.height = height
-        layoutParams = params
-        requestLayout()
+
+
+    private fun observeDataChanges() {
+        clockVm.observeMinutesValue().observeForever { value ->
+            totalMinutes = value
+            invalidate()
+            startAnimation(value)
+        }
+        clockVm.observeHoursValue().observeForever {
+            currentHour = it.first
+            am_pm = it.second
+            invalidate()
+        }
+
+
     }
+
+    val weatherData = MutableLiveData<WeatherData>()
+
+
+
 }
+
