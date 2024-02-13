@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CustomClockView">
+        <attr name="thickness" format="float" />
+        <attr name="textColor" format="color" />
+        <attr name="textSize" format="float" />
+        <attr name="indicatorColor" format="color" />
+        <attr name="dotsColor" format="color" />
+        <attr name="strokeWidth" format="float" />
+        <attr name="colorOnPrimary" format="color" />
+        <attr name="colorOnSecondary" format="color" />
+        <attr name="colorOnTertiary" format="color" />
+    </declare-styleable>
+</resources>
