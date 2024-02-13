@@ -11,8 +11,6 @@ This is an animated clock app built using Canvas and Value Animator in Android. 
 - Location tracking for current location detection
 - Integration with weather API to display current temperature
 
-## Screenshots
-![Animated Clock](screenshots/animated_clock.png)
 
 ## Customization
 ### Attributes Customization
@@ -29,6 +27,10 @@ dimens.xml
 clockTextSize: Size of the clock text.
 clockTextSize: Size of the clock text.
 ```
+
+## Screenshots
+ <img src="screenshot.jpg" alt="Animated Clock" width="220" height="600">
+![Animated Clock](screenshot.jpg)
 Ensure that the necessary permissions for location access are added to the AndroidManifest.xml file.
 
 ## Requirements
