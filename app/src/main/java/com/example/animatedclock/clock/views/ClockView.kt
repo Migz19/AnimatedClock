@@ -2,27 +2,19 @@ package com.example.animatedclock.clock.views
 
 import android.animation.Animator
 import android.animation.ValueAnimator
-import android.app.Application
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
-import androidx.core.view.postDelayed
+import androidx.core.content.res.getColorOrThrow
 import androidx.lifecycle.MutableLiveData
 import com.example.animatedclock.R
-import com.example.animatedclock.location.LocationTracker
-import com.example.animatedclock.weather.data.WeatherBuilder
 import com.example.animatedclock.weather.data.WeatherData
-import com.example.animatedclock.weather.data.WeatherRepository
-import com.example.animatedclock.weather.ui.WeatherState
-import com.example.animatedclock.weather.ui.WeatherViewModel
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.properties.Delegates
 
 private lateinit var clockBitmap: Bitmap
 private lateinit var clockCanvas: Canvas
@@ -30,19 +22,24 @@ private var sweepAngle: Float = 0.0f
 private lateinit var outer: RectF
 private lateinit var inner: RectF
 private lateinit var clockAnimator: ValueAnimator
-private val thickness_scale = 0.3f
+private  var thickness_scale =0f
+private var textColor=Color.BLACK
+private var indicatorColor=Color.BLACK
+private var dotsColor=Color.BLACK
 private var currentHour = 0
 private var am_pm = ""
+private var strokeWidth=0f
 private var totalMinutes = 0
 private var temperature = 0.0
-
+private var textSize=0f
+private var colorsArray: IntArray= IntArray(0)
 class ClockView @JvmOverloads constructor(
-    context: Context, attrs: AttributeSet? = null, defstyleAtrr: Int = 0
+    context: Context, attrs: AttributeSet? = null, defstyleAtrr: Int = 0,
 ) : View(context, attrs, defstyleAtrr) {
     private val clockVm: ClockViewModel by lazy { ClockViewModel() }
     private var circlePaint = Paint().apply {
         style = Paint.Style.STROKE
-        strokeWidth = 25f
+        strokeWidth = this.strokeWidth
         strokeCap = Paint.Cap.ROUND
         color = resources.getColor(R.color.customCyan, null)
         isAntiAlias = true
@@ -55,28 +52,43 @@ class ClockView @JvmOverloads constructor(
     }
 
     private val textPaint = Paint().apply {
-        color = Color.BLACK
-        textSize = 40f
+        color = textColor
+        textSize = this.textSize
         textAlign = Paint.Align.CENTER
     }
     private val indicatorPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.customPink)
-
+        color = indicatorColor
         style = Paint.Style.FILL
     }
     private val pointPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.grey)
+        color = dotsColor
     }
 
     override fun requestLayout() {
         super.requestLayout()
         observeDataChanges()
-
         weatherData.observeForever {
-
-            temperature=it.temperature_2m
+            temperature = it.temperature_2m
             invalidate()
+        }
+
     }
+
+    init {
+        attrs.let {
+            val typedArray = context.obtainStyledAttributes(it, R.styleable.CustomClockView)
+            thickness_scale=typedArray.getFloat(R.styleable.CustomClockView_thickness,0.1f)
+            strokeWidth=typedArray.getFloat(R.styleable.CustomClockView_strokeWidth,0.1f)
+            textColor=typedArray.getColor(R.styleable.CustomClockView_textColor,Color.BLACK)
+            textSize=typedArray.getFloat(R.styleable.CustomClockView_textSize,10f)
+            indicatorColor=typedArray.getColor(R.styleable.CustomClockView_indicatorColor,Color.BLACK)
+            dotsColor=typedArray.getColor(R.styleable.CustomClockView_dotsColor,Color.BLACK)
+            colorsArray[0]=typedArray.getColor(R.styleable.CustomClockView_colorOnPrimary,Color.BLACK)
+            colorsArray[1]=typedArray.getColor(R.styleable.CustomClockView_colorOnSecondary, colorsArray[0])
+            colorsArray[2]=typedArray.getColor(R.styleable.CustomClockView_colorOnTertiary, colorsArray[1])
+            colorsArray[3]= colorsArray[0]
+            typedArray.recycle()
+        }
 
     }
 
@@ -162,14 +174,9 @@ class ClockView @JvmOverloads constructor(
 
             })
             addUpdateListener {
-                val gradientColors = intArrayOf(
-                    ContextCompat.getColor(context, R.color.customCyan),
-                    ContextCompat.getColor(context, R.color.customMagneta),
-                    ContextCompat.getColor(context, R.color.customPink),
-                    ContextCompat.getColor(context, R.color.customCyan)
-                )
+
                 val gradientPositions = floatArrayOf(0f, 0.25f, 0.5f, 1f)
-                val sweepGradient = setSweepAnim(gradientColors, gradientPositions)
+                val sweepGradient = setSweepAnim(colorsArray, gradientPositions)
 
                 circlePaint.shader = sweepGradient
 
@@ -224,7 +231,6 @@ class ClockView @JvmOverloads constructor(
     }
 
     val weatherData = MutableLiveData<WeatherData>()
-
 
 
 }
