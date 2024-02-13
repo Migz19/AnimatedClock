@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="clockStrokeWidth" type="dimen" format="float" >20f</item>
+    <item name="clockTextSize" type="dimen" format="integer" >17</item>
+    <item name="clockThickness" type="dimen" format="float">0.3f</item>
+</resources>

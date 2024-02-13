@@ -5,6 +5,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
@@ -77,10 +78,14 @@ class ClockView @JvmOverloads constructor(
     init {
         attrs.let {
             val typedArray = context.obtainStyledAttributes(it, R.styleable.CustomClockView)
-            thickness_scale=typedArray.getFloat(R.styleable.CustomClockView_thickness,0.1f)
-            strokeWidth=typedArray.getFloat(R.styleable.CustomClockView_strokeWidth,0.1f)
+            val typedValue= TypedValue()
+            resources.getValue(R.dimen.clockThickness,typedValue,true)
+            thickness_scale=typedValue.float
+            resources.getValue(R.dimen.clockStrokeWidth,typedValue,true)
+            strokeWidth=typedValue.float
             textColor=typedArray.getColor(R.styleable.CustomClockView_textColor,Color.BLACK)
-            textSize=typedArray.getFloat(R.styleable.CustomClockView_textSize,10f)
+            resources.getValue(R.dimen.clockTextSize,typedValue,true)
+            textSize=typedValue.float
             indicatorColor=typedArray.getColor(R.styleable.CustomClockView_indicatorColor,Color.BLACK)
             dotsColor=typedArray.getColor(R.styleable.CustomClockView_dotsColor,Color.BLACK)
             colorsArray[0]=typedArray.getColor(R.styleable.CustomClockView_colorOnPrimary,Color.BLACK)

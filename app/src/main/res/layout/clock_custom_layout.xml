@@ -11,13 +11,7 @@
         android:id="@+id/clockView"
         android:layout_width="237dp"
         android:layout_height="274dp"
-        app:textColor="@color/customMagneta"
-        app:textSize="17"
-        app:colorOnPrimary="@color/customCyan"
-        app:colorOnSecondary="@color/teal_200"
-        app:colorOnTertiary="@color/purple_200"
-        app:strokeWidth="70"
-        app:indicatorColor="@color/black"
+
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
