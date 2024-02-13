@@ -30,7 +30,9 @@ clockTextSize: Size of the clock text.
 
 ## Screenshots
  <img src="screenshot.jpg" alt="Animated Clock" width="220" height="600">
-![Animated Clock](screenshot.jpg)
+
+
+
 Ensure that the necessary permissions for location access are added to the AndroidManifest.xml file.
 
 ## Requirements
